@@ -1,1 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UK Vein Care â Bookings Dashboard</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      color: #111928;
+      font-size: 14px;
+    }
+
+    /* ââ LOGIN ââ */
+    #login-screen {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, #0f2d6e 0%, #1a56db 100%);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+    .login-card {
+      background: #fff;
+      border-radius: 18px;
+      padding: 44px 40px;
+      width: 360px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.28);
+      text-align: center;
+    }
+    .login-logo { font-size: 22px; font-weight: 800; color: #0f2d6e; letter-spacing: -0.5px; }
+    .login-subtitle { font-size: 12px; color: #6b7280; margin: 4px 0 32px; }
+    .login-card label { display: block; text-align: left; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .login-card input {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #d1d5db; border-radius: 8px;
+      font-size: 14px; outline: none; transition: border-color 0.2s;
+    }
+    .login-card input:focus { border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.12); }
+    .login-btn {
+      width: 100%; padding: 12px; margin-top: 18px;
+      background: #1a56db; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: #1740a8; }
+    .login-error { color: #dc2626; font-size: 12px; margin-top: 10px; display: none; }
+
+    /* ââ LOADING ââ */
+    #loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(255,255,255,0.88);
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 14px; z-index: 500;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #e5e7eb; border-top-color: #1a56db;
+      border-radius: 50%; animation: spin 0.75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { font-size: 13px; color: #6b7280; }
+
+    /* ââ DASHBOARD ââ */
+    #dashboard { display: none; min-height: 100vh; }
+
+    .header {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 14px 28px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0; z-index: 100;
+    }
+    .header-brand { font-size: 17px; font-weight: 800; color: #0f2d6e; }
+    .header-sub { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+    .header-actions { display: flex; align-items: center; gap: 14px; }
+    .last-updated-text { font-size: 11px; color: #9ca3af; }
+    .btn-refresh {
+      padding: 7px 16px; background: #eff6ff; color: #1a56db;
+      border: 1px solid #bfdbfe; border-radius: 7px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-refresh:hover { background: #dbeafe; }
+
+    .main { padding: 24px 28px; max-width: 1400px; margin: 0 auto; }
+
+    /* ââ FILTERS ââ */
+    .filter-row {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 22px; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; gap: 4px; }
+    .filter-sep { width: 1px; background: #d1d5db; height: 24px; margin: 0 6px; }
+    .filter-label { font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; align-self: center; }
+    .filter-pill {
+      padding: 5px 13px; border: 1.5px solid #e5e7eb; background: #fff;
+      border-radius: 20px; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .filter-pill:hover { border-color: #93c5fd; }
+    .filter-pill.active { background: #1a56db; color: #fff; border-color: #1a56db; }
+
+    /* ââ KPI GRID ââ */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px; margin-bottom: 22px;
+    }
+    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 600px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
+    .kpi {
+      background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 12px; padding: 18px 20px;
+    }
+    .kpi-label { font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.6px; }
+    .kpi-value { font-size: 34px; font-weight: 800; margin: 6px 0 3px; line-height: 1; }
+    .kpi-sub { font-size: 11px; color: #9ca3af; }
+    .kpi.blue .kpi-value { color: #1a56db; }
+    .kpi.green .kpi-value { color: #059669; }
+    .kpi.purple .kpi-value { color: #7c3aed; }
+    .kpi.orange .kpi-value { color: #d97706; }
+    .kpi.red .kpi-value { color: #dc2626; }
+
+    /* ââ CHART GRID ââ */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px; margin-bottom: 16px;
+    }
+    .chart-card {
+      background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 12px; padding: 20px;
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 14px; }
+    .chart-wrap { position: relative; }
+
+    /* ââ TABLE ââ */
+    .table-card {
+      background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .table-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .table-title { font-size: 13px; font-weight: 700; color: #374151; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase;
+      letter-spacing: 0.5px; padding: 7px 12px; border-bottom: 1px solid #f3f4f6;
+      text-align: left; background: #f9fafb;
+    }
+    td { padding: 9px 12px; border-bottom: 1px solid #f9fafb; font-size: 13px; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 10px;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    .b-consultation { background: #dbeafe; color: #1e40af; }
+    .b-treatment    { background: #d1fae5; color: #065f46; }
+    .b-arrived      { background: #d1fae5; color: #065f46; }
+    .b-upcoming     { background: #dbeafe; color: #1e40af; }
+    .b-canceled     { background: #fee2e2; color: #991b1b; }
+    .b-finished     { background: #ede9fe; color: #5b21b6; }
+    .b-no-show      { background: #fef3c7; color: #92400e; }
+
+    .empty-state { text-align: center; color: #9ca3af; padding: 24px 0; }
+
+    @media (max-width: 768px) {
+      .chart-grid { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+      .main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">ð©º UK Vein Care</div>
+    <div class="login-subtitle">Bookings Analytics Dashboard</div>
+    <label for="pwd">Password</label>
+    <input type="password" id="pwd" placeholder="Enter password"
+      onkeydown="if(event.key==='Enter') doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In â</button>
+    <div class="login-error" id="login-err">Incorrect password. Please try again.</div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-msg" id="load-msg">Loading bookings...</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="header">
+    <div>
+      <div class="header-brand">UK Vein Care â Bookings Dashboard</div>
+      <div class="header-sub">Consultations &amp; Treatments Â· Since 1 January 2026</div>
+    </div>
+    <div class="header-actions">
+      <span class="last-updated-text" id="ts">â</span>
+      <button class="btn-refresh" onclick="loadData()">â» Refresh</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <span class="filter-label">Period</span>
+      <div class="filter-group">
+        <button class="filter-pill active" data-filter="all"   onclick="setFilter('all',this)">All time</button>
+        <button class="filter-pill"        data-filter="mtd"   onclick="setFilter('mtd',this)">This month</button>
+        <button class="filter-pill"        data-filter="30"    onclick="setFilter('30',this)">Last 30 days</button>
+        <button class="filter-pill"        data-filter="90"    onclick="setFilter('90',this)">Last 90 days</button>
+      </div>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Group by</span>
+      <div class="filter-group">
+        <button class="filter-pill" data-group="day"   onclick="setGroup('day',this)">Day</button>
+        <button class="filter-pill active" data-group="week"  onclick="setGroup('week',this)">Week</button>
+        <button class="filter-pill" data-group="month" onclick="setGroup('month',this)">Month</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi blue">
+        <div class="kpi-label">Consultations</div>
+        <div class="kpi-value" id="k-consult">â</div>
+        <div class="kpi-sub">Since Jan 1, 2026</div>
+      </div>
+      <div class="kpi green">
+        <div class="kpi-label">Treatments</div>
+        <div class="kpi-value" id="k-treat">â</div>
+        <div class="kpi-sub">Since Jan 1, 2026</div>
+      </div>
+      <div class="kpi purple">
+        <div class="kpi-label">This Month</div>
+        <div class="kpi-value" id="k-month">â</div>
+        <div class="kpi-sub" id="k-month-lbl">â</div>
+      </div>
+      <div class="kpi orange">
+        <div class="kpi-label">Upcoming</div>
+        <div class="kpi-value" id="k-upcoming">â</div>
+        <div class="kpi-sub">Scheduled ahead</div>
+      </div>
+      <div class="kpi red">
+        <div class="kpi-label">Cancellation Rate</div>
+        <div class="kpi-value" id="k-cancel">â</div>
+        <div class="kpi-sub" id="k-cancel-lbl">of all bookings</div>
+      </div>
+    </div>
+
+    <!-- Main trend chart -->
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title">Bookings Over Time â Consultations vs Treatments</div>
+        <div class="chart-wrap" style="height:260px"><canvas id="ch-trend"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Cumulative -->
+    <div class="chart-grid">
+      <div class="chart-card full">
+        <div class="chart-title">Cumulative Bookings Since 1 January 2026</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="ch-cum"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Clinic + Status -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Bookings by Clinic</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="ch-clinic"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Status Breakdown</div>
+        <div class="chart-wrap" style="height:240px"><canvas id="ch-status"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Per-type clinic breakdown -->
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Consultations by Clinic</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="ch-clinic-c"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Treatments by Clinic</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="ch-clinic-t"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Upcoming bookings table -->
+    <div class="table-card">
+      <div class="table-hdr">
+        <div class="table-title">Upcoming Bookings</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Patient</th>
+            <th>Type</th>
+            <th>Date &amp; Time</th>
+            <th>Clinic</th>
+            <th>Clinician</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-upcoming"></tbody>
+      </table>
+    </div>
+
+    <!-- Clinic summary table -->
+    <div class="table-card">
+      <div class="table-hdr">
+        <div class="table-title">Bookings by Clinic â Summary</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Clinic</th>
+            <th>Consultations</th>
+            <th>Treatments</th>
+            <th>Total</th>
+            <th>Conversion %</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-clinic"></tbody>
+      </table>
+    </div>
+
+    <!-- Source table -->
+    <div class="table-card">
+      <div class="table-hdr">
+        <div class="table-title">Bookings by Patient Source</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Consultations</th>
+            <th>Treatments</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-source"></tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"
+  integrity="sha384-iU8HYtnGQ8Cy4zl7gbN5OhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi"
+  crossorigin="anonymous"></script>
+<script>
+const PWD     = 'Kl9nikker!';
+const API_URL = 'https://www.zohoapis.eu/crm/v3/coql';
+const PALETTE = ['#1a56db','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#db2777','#65a30d','#ea580c','#6366f1'];
+
+let allData = [];
+let filt    = 'all';
+let grp     = 'week';
+let charts  = {};
+
+// Access token injected at deploy time by GitHub Actions (valid ~1 hour)
+const ACCESS_TOKEN = '__ACCESS_TOKEN__';
+
+/* ââ AUTH ââ */
+function doLogin() {
+  if (document.getElementById('pwd').value === PWD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadData();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+    document.getElementById('pwd').value = '';
+  }
+}
+
+/* ââ TOKEN ââ */
+async function getToken() {
+  if (!ACCESS_TOKEN || ACCESS_TOKEN === '__ACCESS_TOKEN__') {
+    throw new Error('Dashboard not yet deployed â token not injected. Please run the GitHub Actions workflow.');
+  }
+  return ACCESS_TOKEN;
+}
+
+/* ââ LOAD DATA ââ */
+async function loadData() {
+  showLoad(true);
+  hideError();
+  allData = [];
+  let offset  = 0;
+  const PAGE  = 200;
+  let hasMore = true;
+
+  try {
+    const token = await getToken();
+
+    while (hasMore) {
+      msg(`Loading bookings â¦ (${allData.length} fetched)`);
+
+      const resp = await fetch(API_URL, {
+        method:  'POST',
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${token}`,
+          'Content-Type':   'application/json',
+        },
+        body: JSON.stringify({
+          select_query:
+            `SELECT id, Name, Booking_Type, Start_Date, Clinic, Clinic_Country, Data_Source, Status ` +
+            `FROM Bookings ` +
+            `WHERE (Booking_Type = 'Consultation' OR Booking_Type = 'Treatment') ` +
+            `AND Start_Date >= '2026-01-01T00:00:00+00:00' ` +
+            `LIMIT ${PAGE} OFFSET ${offset}`,
+        }),
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`Zoho API ${resp.status}: ${errText}`);
+      }
+
+      const payload = await resp.json();
+
+      if (payload.status === 'error' || payload.code) {
+        throw new Error('Zoho API error: ' + JSON.stringify(payload));
+      }
+
+      const rows = payload.data || [];
+      allData  = allData.concat(rows);
+      hasMore  = payload.info?.more_records === true && rows.length === PAGE;
+      offset  += PAGE;
+    }
+
+    document.getElementById('ts').textContent =
+      'Last updated: ' + new Date().toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+
+    render();
+  } catch (e) {
+    showError(e.message || String(e));
+    msg('Error loading data');
+    setTimeout(() => showLoad(false), 500);
+    return;
+  }
+  showLoad(false);
+}
+
+function showError(html) {
+  let el = document.getElementById('err-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'err-banner';
+    el.style.cssText = 'background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:14px 20px;margin:16px 28px;border-radius:10px;font-size:13px;line-height:1.5;word-break:break-all;';
+    document.querySelector('.main').prepend(el);
+  }
+  el.innerHTML = '<strong>â  Data load error</strong><br>' + html;
+  el.style.display = 'block';
+}
+function hideError() {
+  const el = document.getElementById('err-banner');
+  if (el) el.style.display = 'none';
+}
+function showLoad(v) {
+  document.getElementById('loading-overlay').style.display = v ? 'flex' : 'none';
+}
+function msg(t) { document.getElementById('load-msg').textContent = t; }
+
+/* ââ FILTER / GROUP ââ */
+function setFilter(f, btn) {
+  filt = f;
+  document.querySelectorAll('[data-filter]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function setGroup(g, btn) {
+  grp = g;
+  document.querySelectorAll('[data-group]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function filtered() {
+  const now = Date.now();
+  return allData.filter(b => {
+    const t = new Date(b.Start_Date).getTime();
+    if (filt === '30')  return (now - t) <= 30 * 864e5;
+    if (filt === '90')  return (now - t) <= 90 * 864e5;
+    if (filt === 'mtd') {
+      const d = new Date(b.Start_Date), n = new Date();
+      return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+    }
+    return true;
+  });
+}
+
+/* ââ RENDER ââ */
+function render() {
+  const data = filtered();
+  renderKPIs(data);
+  renderTrend(data);
+  renderCumulative(data);
+  renderClinic(data);
+  renderStatus(data);
+  renderClinicType(data, 'Consultation', 'ch-clinic-c');
+  renderClinicType(data, 'Treatment',    'ch-clinic-t');
+  renderUpcomingTable(data);
+  renderClinicTable(data);
+  renderSourceTable(data);
+}
+
+/* ââ KPIs ââ */
+function renderKPIs(data) {
+  const consults  = data.filter(b => b.Booking_Type === 'Consultation').length;
+  const treats    = data.filter(b => b.Booking_Type === 'Treatment').length;
+  const now       = new Date();
+  const thisMonth = data.filter(b => {
+    const d = new Date(b.Start_Date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+  const upcoming = data.filter(b => b.Status === 'Upcoming').length;
+  const canceled = data.filter(b => b.Status === 'Canceled').length;
+  const rate     = data.length ? ((canceled / data.length) * 100).toFixed(1) + '%' : 'â';
+
+  set('k-consult',    consults);
+  set('k-treat',      treats);
+  set('k-month',      thisMonth);
+  set('k-month-lbl',  now.toLocaleString('en-GB', { month: 'long', year: 'numeric' }));
+  set('k-upcoming',   upcoming);
+  set('k-cancel',     rate);
+  set('k-cancel-lbl', `${canceled} of ${data.length} bookings`);
+}
+function set(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+
+/* ââ PERIOD KEY ââ */
+function periodKey(dateStr) {
+  const d = new Date(dateStr);
+  if (grp === 'day')   return d.toISOString().slice(0, 10);
+  if (grp === 'month') return d.toISOString().slice(0, 7);
+  const day  = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon  = new Date(d); mon.setDate(d.getDate() + diff);
+  return mon.toISOString().slice(0, 10);
+}
+function fmtKey(k) {
+  if (grp === 'month') return new Date(k + '-01').toLocaleString('en-GB', { month: 'short', year: '2-digit' });
+  return new Date(k).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+/* ââ TREND ââ */
+function renderTrend(data) {
+  const map = {};
+  data.forEach(b => {
+    const k = periodKey(b.Start_Date);
+    if (!map[k]) map[k] = { c: 0, t: 0 };
+    if (b.Booking_Type === 'Consultation') map[k].c++;
+    else map[k].t++;
+  });
+  const labels = Object.keys(map).sort();
+  destroy('ch-trend');
+  charts['ch-trend'] = new Chart(document.getElementById('ch-trend'), {
+    type: 'bar',
+    data: {
+      labels: labels.map(fmtKey),
+      datasets: [
+        { label: 'Consultation', data: labels.map(l => map[l].c), backgroundColor: '#3b82f6', borderRadius: 4 },
+        { label: 'Treatment',    data: labels.map(l => map[l].t), backgroundColor: '#10b981', borderRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+    },
+  });
+}
+
+/* ââ CUMULATIVE ââ */
+function renderCumulative(data) {
+  const sorted = [...data].sort((a, b) => new Date(a.Start_Date) - new Date(b.Start_Date));
+  const map = {};
+  sorted.forEach(b => {
+    const k = periodKey(b.Start_Date);
+    if (!map[k]) map[k] = { c: 0, t: 0 };
+    if (b.Booking_Type === 'Consultation') map[k].c++;
+    else map[k].t++;
+  });
+  const labels = Object.keys(map).sort();
+  let cc = 0, ct = 0;
+  const cumC = [], cumT = [];
+  labels.forEach(l => { cc += map[l].c; ct += map[l].t; cumC.push(cc); cumT.push(ct); });
+  destroy('ch-cum');
+  charts['ch-cum'] = new Chart(document.getElementById('ch-cum'), {
+    type: 'line',
+    data: {
+      labels: labels.map(fmtKey),
+      datasets: [
+        { label: 'Consultations', data: cumC, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Treatments',    data: cumT, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, tension: 0.3, pointRadius: 2 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top' } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true } },
+    },
+  });
+}
+
+/* ââ CLINIC ââ */
+function renderClinic(data) {
+  const map = {};
+  data.forEach(b => { const c = b.Clinic?.name || 'Unknown'; map[c] = (map[c] || 0) + 1; });
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  destroy('ch-clinic');
+  charts['ch-clinic'] = new Chart(document.getElementById('ch-clinic'), {
+    type: 'bar',
+    data: {
+      labels:   sorted.map(([k]) => k),
+      datasets: [{ label: 'Total', data: sorted.map(([, v]) => v), backgroundColor: PALETTE, borderRadius: 4 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true }, y: { grid: { display: false } } },
+    },
+  });
+}
+
+function renderClinicType(data, type, id) {
+  const sub = data.filter(b => b.Booking_Type === type);
+  const map = {};
+  sub.forEach(b => { const c = b.Clinic?.name || 'Unknown'; map[c] = (map[c] || 0) + 1; });
+  const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  const col = type === 'Consultation' ? '#3b82f6' : '#10b981';
+  destroy(id);
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: {
+      labels:   sorted.map(([k]) => k),
+      datasets: [{ label: type, data: sorted.map(([, v]) => v), backgroundColor: col, borderRadius: 4 }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true }, y: { grid: { display: false } } },
+    },
+  });
+}
+
+/* ââ STATUS ââ */
+function renderStatus(data) {
+  const map = {};
+  data.forEach(b => { map[b.Status] = (map[b.Status] || 0) + 1; });
+  const statusColors = { Arrived: '#10b981', Upcoming: '#3b82f6', Finished: '#8b5cf6', Canceled: '#ef4444', 'No Show': '#f59e0b' };
+  const labels = Object.keys(map);
+  destroy('ch-status');
+  charts['ch-status'] = new Chart(document.getElementById('ch-status'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data: labels.map(l => map[l]), backgroundColor: labels.map(l => statusColors[l] || '#9ca3af'), borderWidth: 2 }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } },
+  });
+}
+
+/* ââ UPCOMING TABLE ââ */
+function renderUpcomingTable(data) {
+  const now  = new Date();
+  const rows = data
+    .filter(b => b.Status === 'Upcoming' && new Date(b.Start_Date) >= now)
+    .sort((a, b) => new Date(a.Start_Date) - new Date(b.Start_Date))
+    .slice(0, 25);
+  const tbody = document.getElementById('tbl-upcoming');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No upcoming bookings</td></tr>'; return; }
+  tbody.innerHTML = rows.map(b => {
+    const parts    = (b.Name || '').split(', ');
+    const patient  = parts[0] || 'â';
+    const clinician = parts[2] || 'â';
+    const d  = new Date(b.Start_Date);
+    const ds = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+             + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const clinic = b.Clinic?.name || 'â';
+    const tc = b.Booking_Type === 'Consultation' ? 'b-consultation' : 'b-treatment';
+    const sc = 'b-' + (b.Status || '').toLowerCase().replace(' ', '-');
+    return `<tr>
+      <td>${patient}</td>
+      <td><span class="badge ${tc}">${b.Booking_Type}</span></td>
+      <td>${ds}</td>
+      <td>${clinic}</td>
+      <td>${clinician}</td>
+      <td><span class="badge ${sc}">${b.Status}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ââ CLINIC TABLE ââ */
+function renderClinicTable(data) {
+  const map = {};
+  data.forEach(b => {
+    const c = b.Clinic?.name || 'Unknown';
+    if (!map[c]) map[c] = { consult: 0, treat: 0 };
+    if (b.Booking_Type === 'Consultation') map[c].consult++;
+    else map[c].treat++;
+  });
+  const rows = Object.entries(map).map(([c, v]) => {
+    const total = v.consult + v.treat;
+    const conv  = v.consult ? ((v.treat / v.consult) * 100).toFixed(0) + '%' : 'â';
+    return [c, v.consult, v.treat, total, conv];
+  }).sort((a, b) => b[3] - a[3]);
+  document.getElementById('tbl-clinic').innerHTML = rows.map(([c, co, tr, tot, cv]) => `<tr>
+    <td><strong>${c}</strong></td>
+    <td><span class="badge b-consultation">${co}</span></td>
+    <td><span class="badge b-treatment">${tr}</span></td>
+    <td><strong>${tot}</strong></td>
+    <td>${cv}</td>
+  </tr>`).join('');
+}
+
+/* ââ SOURCE TABLE ââ */
+function renderSourceTable(data) {
+  const map = {};
+  data.forEach(b => {
+    const s = b.Data_Source || 'Unknown';
+    if (!map[s]) map[s] = { c: 0, t: 0 };
+    if (b.Booking_Type === 'Consultation') map[s].c++;
+    else map[s].t++;
+  });
+  const rows = Object.entries(map).map(([s, v]) => [s, v.c, v.t, v.c + v.t]).sort((a, b) => b[3] - a[3]);
+  document.getElementById('tbl-source').innerHTML = rows.map(([s, c, t, tot]) => `<tr>
+    <td>${s}</td><td>${c}</td><td>${t}</td><td><strong>${tot}</strong></td>
+  </tr>`).join('');
+}
+
+function destroy(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+</script>
+</body>
+</html>
 
