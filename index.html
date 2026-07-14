@@ -371,7 +371,7 @@ let grp     = 'week';
 let charts  = {};
 
 // Access token injected at deploy time by GitHub Actions (valid ~1 hour)
-const ACCESS_TOKEN = '1000.acd3e29d0822df38b6bfe549250ac22a.c948ae57d4ffde49656366f8ff70aeb6';
+const ACCESS_TOKEN = '1000.bfcae83bf6b414edc24e319a1fdbdce2.8984ff1b9768e14d06678a2ca351753d';
 
 /* ââ AUTH ââ */
 function doLogin() {
@@ -387,7 +387,7 @@ function doLogin() {
 
 /* ââ TOKEN ââ */
 async function getToken() {
-  if (!ACCESS_TOKEN || ACCESS_TOKEN === '1000.acd3e29d0822df38b6bfe549250ac22a.c948ae57d4ffde49656366f8ff70aeb6') {
+  if (!ACCESS_TOKEN || ACCESS_TOKEN === '1000.bfcae83bf6b414edc24e319a1fdbdce2.8984ff1b9768e14d06678a2ca351753d') {
     throw new Error('Dashboard not yet deployed â token not injected. Please run the GitHub Actions workflow.');
   }
   return ACCESS_TOKEN;
